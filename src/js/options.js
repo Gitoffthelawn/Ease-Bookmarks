@@ -44,7 +44,7 @@ $('#importBtn').addEventListener('click', () => {
     onFileSelected: (files) => {
       const [file] = files;
       return importConfig(file).then(() => {
-        location.reload();
+        safeReload();
       });
     }
   });
@@ -58,7 +58,7 @@ $('#resetBtn').addEventListener('click', () => {
       chrome.runtime.sendMessage({ task: 'reset' }, () => {
           localStorage.version = chrome.runtime.getManifest().version;
           
-          location.reload();
+          safeReload();
         });
     })
   }
@@ -68,8 +68,12 @@ i18nLocalize();
 Promise.all([
   loadSettings,
   loadRootNode,
+  loadPreItems,
 ]).then(() => {
+  bookmarkNode.checkRootInfo(BM.settings.rootInfo);
+
   // 必须在最前面 #folderX的数据通过后面for写入
+  $('#_1').previousElementSibling.value = bookmarkNode.main;
   $('#_2').previousElementSibling.value = bookmarkNode.other;
   $('#_1').textContent = BM.settings.rootInfo[bookmarkNode.main];
   $('#_2').textContent = BM.settings.rootInfo[bookmarkNode.other];

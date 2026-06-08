@@ -10,9 +10,21 @@ const bookmarkNode = {
   updateTopIDs(rootTree) {
     if (!rootTree) return;
 
+    const mainNode = rootTree.find(n => n.folderType === "bookmarks-bar") || rootTree[0];
     const otherNode = rootTree.find(n => n.folderType === "other") || rootTree[1];
+    if (mainNode) {
+      this.main = mainNode.id;
+    }
     if (otherNode) {
       this.other = otherNode.id;
+    }
+  },
+  checkRootInfo(rootInfo) {
+    // 其他书签ID变了
+    if (!rootInfo[bookmarkNode.main] || !rootInfo[bookmarkNode.other]) {
+      chrome.runtime.sendMessage({ task: 'setRootInfo' }, () => {
+        safeReload();
+      });
     }
   },
 }
@@ -37,6 +49,7 @@ window.BM = {
     bodyWidth_3: '530px',
     bodyWidth_4: '660px',
     bodyWidth_5: '800px',
+    clearScrollPosWhenExitFolder: 1,
     compositionEvent: 0,
     fastCreate: 0, // 0-2
     hotkeyCancelSeleted: 'Space',
@@ -85,22 +98,22 @@ loadRootNode = new Promise(function(resolve, reject) {
 });
 
 // 提前读取bookmarks数据，优化启动速度
-if (location.pathname === '/popup.html') {
-  loadPreItems = new Promise(function(resolve, reject) {
-    chrome.bookmarks.getChildren(BM.startupReal.toString(), (results) => {
-      // console.log(results);
-      // 启动文件夹被删除了
-      if (typeof results === 'undefined') {
-        localStorage.setItem('startupID', BM.default.startup);
-        chrome.storage.sync.set({startup: BM.default.startup}, () => {
-          location.reload();
+loadPreItems = new Promise(function(resolve, reject) {
+  chrome.bookmarks.getChildren(BM.startupReal.toString(), (results) => {
+    // console.log(results);
+    // 启动文件夹被删除了
+    if (typeof results === 'undefined') {
+      loadRootNode.then(() => {
+        localStorage.setItem('startupID', bookmarkNode.main);
+        chrome.storage.sync.set({startup: bookmarkNode.main}, () => {
+          safeReload();
         });
-      }
-      BM.preItems = results;
-      resolve();
-    });
+      });
+    }
+    BM.preItems = results;
+    resolve();
   });
-}
+});
 
 const $ = (css, d = document) => d.querySelector(css);
 const $$ = (css, d = document) => d.querySelectorAll(css);
@@ -116,4 +129,16 @@ function setStartupID(folderID) {
   folderID > 0 && localStorage.setItem('startupID', folderID);
   folderID > -1 && localStorage.removeItem('startupFromLast');
   folderID > -2 && localStorage.removeItem('LastScrollPos');
+}
+
+function safeReload(maxCount = 3) {
+  const url = new URL(window.location);
+  const params = url.searchParams;
+  const count = parseInt(params.get('_r') || '0');
+  
+  if (count < maxCount) {
+    params.set('_r', (count + 1).toString());
+    url.search = params.toString();
+    location.replace(url.toString());
+  }
 }

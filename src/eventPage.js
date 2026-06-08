@@ -8,7 +8,11 @@ const bookmarkNode = {
   updateTopIDs(rootTree) {
     if (!rootTree) return;
 
+    const mainNode = rootTree.find(n => n.folderType === "bookmarks-bar") || rootTree[0];
     const otherNode = rootTree.find(n => n.folderType === "other") || rootTree[1];
+    if (mainNode) {
+      this.main = mainNode.id;
+    }
     if (otherNode) {
       this.other = otherNode.id;
     }
@@ -16,7 +20,7 @@ const bookmarkNode = {
 }
 
 // default_icon 设为透明图标，但效果不好
-var iconBase64 = localStorage.customIcon;
+var iconBase64 = globalThis.localStorage?.customIcon;
 if (iconBase64) {
   chrome.browserAction.setIcon({path: iconBase64});
 }
@@ -54,7 +58,7 @@ function updataOldData() {
 }
 
 // 安装、更新
-chrome.runtime.onInstalled.addListener((details) => {
+chrome.runtime?.onInstalled?.addListener((details) => {
   if (!['install', 'update'].includes(details.reason)) return;
 
   var manifest = chrome.runtime.getManifest();
@@ -69,7 +73,7 @@ chrome.runtime.onInstalled.addListener((details) => {
   }
 });
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime?.onMessage?.addListener((message, sender, sendResponse) => {
   // console.log(message, sender);
   let task = message.task;
   if (task === 'reset') {
@@ -94,7 +98,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 //   localStorage.setItem('time', new Date().toLocaleString());
 // });
 
-chrome.contextMenus.create({
+chrome.contextMenus?.create({
   title: chrome.i18n.getMessage('bookmarksManager'), 
   contexts: ['browser_action'],
   onclick: () => {
